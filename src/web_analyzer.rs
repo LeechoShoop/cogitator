@@ -483,6 +483,7 @@ pub struct WebAnalysisResult {
     pub overall_grade: String, // A / B / C / D / F
     pub http_method_audit: Option<HttpMethodAudit>,
     pub passive_fingerprint: Option<PassiveTechFingerprint>,
+    pub cve_matches: Vec<crate::cve::CveMatch>,
 }
 
 // ─── JSON export ─────────────────────────────────────────────────────────────
@@ -553,6 +554,7 @@ fn client_build_failure(target_url: String, reason: reqwest::Error) -> WebAnalys
         overall_grade: "F".to_string(),
         http_method_audit: None,
         passive_fingerprint: None,
+        cve_matches: Vec::new(),
     }
 }
 
@@ -594,6 +596,18 @@ pub async fn analyze_site(
 
     // ── Step 4: Passive tech fingerprinting -- robots, sitemap, 404 ──────────
     let passive_fingerprint = Some(probe_passive_fingerprint(&no_follow_client, &target_url).await);
+
+    // ── Step 4b: CVE lookup against detected technologies ────────────────────
+    // Best-effort and slow (one external HTTP round-trip per mapped
+    // technology against a third-party mirror) -- failures/timeouts on
+    // individual lookups are swallowed inside `lookup_cves`, never fatal to
+    // the rest of the analysis.
+    let cve_matches = match &passive_fingerprint {
+        Some(fp) if !fp.detected_technologies.is_empty() => {
+            crate::cve::lookup_cves(&fp.detected_technologies).await
+        }
+        _ => Vec::new(),
+    };
 
     // ── Step 5: Main request (follows redirects) for headers + HTML ──────────
     let start_time = Instant::now();
@@ -677,6 +691,7 @@ pub async fn analyze_site(
                 overall_grade,
                 http_method_audit,
                 passive_fingerprint,
+                cve_matches,
             }
         }
         Err(e) => WebAnalysisResult {
@@ -710,6 +725,7 @@ pub async fn analyze_site(
             overall_grade: "F".to_string(),
             http_method_audit,
             passive_fingerprint,
+            cve_matches,
         },
     }
 }
@@ -1347,6 +1363,22 @@ pub fn format_analysis(result: &WebAnalysisResult) -> String {
         r.push_str("│  └─ [Probe not performed]\n");
     }
 
+    // ── CVE matches ───────────────────────────────────────────────────────────
+    r.push_str("\n┌─[ CVE MATCHES ]──────────────────────────────────────\n");
+    if result.cve_matches.is_empty() {
+        r.push_str("│  └─ No known CVEs matched against detected technologies\n");
+    } else {
+        let last_idx = result.cve_matches.len() - 1;
+        for (i, cve) in result.cve_matches.iter().enumerate() {
+            let branch = if i == last_idx { "└─" } else { "├─" };
+            let desc_snippet: String = cve.description.chars().take(80).collect();
+            r.push_str(&format!(
+                "│  {} {}  (CVSS {:.1})  {}\n",
+                branch, cve.cve_id, cve.cvss, desc_snippet
+            ));
+        }
+    }
+
     r.push_str("\n└──────────────────────────────────────────────────────\n");
     r.push_str("   scroll  |  any other key: close\n");
     r
@@ -1492,6 +1524,15 @@ mod format_analysis_tests {
                 detected_technologies:   vec!["WordPress".to_string(), "Blog platform".to_string()],
                 confidence_note:         "Passive only — no active probing".to_string(),
             }),
+
+            cve_matches: vec![
+                crate::cve::CveMatch {
+                    cve_id: "CVE-2023-1234".to_string(),
+                    description: "A vulnerability allowing remote attackers to do bad things via crafted input to the admin panel.".to_string(),
+                    cvss: 8.8,
+                    url: "https://example.com/advisories/CVE-2023-1234".to_string(),
+                },
+            ],
         }
     }
 
@@ -1914,6 +1955,30 @@ mod format_analysis_tests {
     fn passive_confidence_note_shown() {
         let r = format_analysis(&full_result());
         assert_contains(&r, "Passive only — no active probing");
+    }
+
+    #[test]
+    fn cve_matches_section_present() {
+        let r = format_analysis(&full_result());
+        assert_contains(&r, "CVE MATCHES");
+        assert_contains(&r, "CVE-2023-1234");
+        assert_contains(&r, "8.8");
+    }
+
+    #[test]
+    fn cve_matches_description_truncated_to_80_chars() {
+        let r = format_analysis(&full_result());
+        // Fixture description is longer than 80 chars -- the report should
+        // show only the first 80, not the full sentence.
+        assert!(!r.contains("admin panel."));
+    }
+
+    #[test]
+    fn cve_matches_empty_shows_no_matches_message() {
+        let mut result = full_result();
+        result.cve_matches = Vec::new();
+        let r = format_analysis(&result);
+        assert_contains(&r, "No known CVEs matched");
     }
 
     #[test]

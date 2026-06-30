@@ -39,3 +39,11 @@ pub const RATE_LIMIT_WINDOW_SECS: u64 = 60;
 /// Minimum acceptable HSTS `max-age` in seconds (30 days).
 /// Values below this incur a score penalty in `crypto_forensic`.
 pub const HSTS_MIN_MAX_AGE_SECS: u64 = 2_592_000;
+
+// ── WebSocket interception ───────────────────────────────────────────────────
+
+/// How much of a WS frame's payload is copied into the `History` preview
+/// (`RequestRecord::body`). Mirrors `proxy_guard::MAX_HISTORY_BODY_BYTES` in
+/// spirit but deliberately much smaller — WS rows in History are for
+/// spotting patterns frame-by-frame, not full replay of a chatty stream.
+pub const WS_PAYLOAD_PREVIEW_BYTES: usize = 256;
