@@ -100,7 +100,7 @@ The Machine Spirit runs on `tokio` — the async proxy core coexists with the sy
 ### Build from Source
 
 ```bash
-git clone https://github.com/<your-username>/cogitator.git
+git clone https://github.com/LeechoShoop/cogitator.git
 cd cogitator
 cargo build --release
 ```
