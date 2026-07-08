@@ -22,7 +22,7 @@ const PAYLOADS: &[&str] = &[
 ];
 
 /// Response-body substrings indicating a sensitive file was disclosed.
-const SUCCESS_SIGNATURES: &[&str] = &[
+pub const SUCCESS_SIGNATURES: &[&str] = &[
     "root:x:",
     "[extensions]",
     "boot loader",

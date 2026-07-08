@@ -19,7 +19,7 @@ const MAX_PARALLEL_CHECKS: usize = 5;
 
 // ─── Severity ─────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Severity {
     Critical,
     High,
@@ -57,7 +57,7 @@ impl Ord for Severity {
 // ─── Target / Finding ─────────────────────────────────────────────────────────
 
 /// A single request worth actively probing.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ScanTarget {
     pub url: String,
     pub method: String,
@@ -67,7 +67,7 @@ pub struct ScanTarget {
 }
 
 /// A single piece of evidence produced by a `ScanCheck` against a `ScanTarget`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ScanFinding {
     pub check_name: String,
     pub severity: Severity,

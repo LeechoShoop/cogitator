@@ -1,7 +1,6 @@
 [package]
 name = "Cogitator"
 version = "0.1.0"
-
 edition = "2024"
 
 [dependencies]
@@ -37,3 +36,4 @@ anyhow = "1.0.102"
 rand = "0.8.6"
 inventory = "0.3.24"
 libloading = "0.9.0"
+hickory-server = "0.24"

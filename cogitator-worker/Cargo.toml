@@ -1,0 +1,30 @@
+
+# cogitator-worker — minimal HTTP scan worker for Cogitator's distributed
+# scanning mode. Depends on the root `cogitator` crate purely for its lib
+# target (see `../src/lib.rs`), which exposes the `ScanCheck` trait, the six
+# vulnerability checks, and the `worker_protocol` wire format unchanged.
+#
+# NOTE on version numbers below: `reqwest`'s "json" feature is confirmed
+# already in use by the root crate (`cve.rs` calls `resp.json().await`), and
+# `serde`/`serde_json` are already root-crate dependencies (web_analyzer.rs,
+# spider.rs). `tokio` and `axum` versions are this crate's own choice and
+# not previously used elsewhere in the tree — double-check the `tokio`
+# version here is compatible with whatever the root crate already pins
+# before running `cargo build`, since Cargo unifies to one resolved version
+# per crate across the whole workspace.
+
+[package]
+name = "cogitator-worker"
+version = "0.8.0"
+edition = "2024"
+
+[dependencies]
+cogitator = { path = "..", package = "Cogitator" }
+
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal"] }
+axum = "0.7"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+http = "1.4.2"
+config = "0.15.25"

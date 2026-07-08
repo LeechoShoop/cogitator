@@ -1,0 +1,58 @@
+# secrets-detector-plugin — a complete, working example Cogitator plugin.
+#
+# This is the crate PLUGINS.md's (workspace root) "write your first plugin" walkthrough uses
+# as its template. Copy this whole directory, rename the package, and edit
+# `src/lib.rs` to get started on your own plugin.
+#
+# See PLUGINS.md (workspace root) for the full explanation of every field below, and
+# src/lib.rs's module docs for the FFI/ABI nuances these choices exist for.
+
+[package]
+name = "example-plugin"
+version = "0.8.0"
+edition = "2024"
+# ^ Must match cogitator-plugin-api's own edition. Not because Cargo
+#   requires it (crates with different editions link together fine), but
+#   because this crate's `export_plugin!` macro call expands to
+#   `#[unsafe(no_mangle)]` — syntax recent editions require on exported
+#   `extern "C"` symbols. Matching editions is the simplest way to never
+#   have to think about which edition introduced that requirement.
+
+[lib]
+# REQUIRED — without this, `cargo build` produces a normal Rust library
+# (.rlib), which Cogitator's dlopen-based loader cannot load at all. This
+# is what makes the build produce a real .so/.dll/.dylib.
+crate-type = ["cdylib"]
+
+[dependencies]
+# This path MUST point at the exact same cogitator-plugin-api directory
+# Cogitator itself is built against — see PLUGINS.md (workspace root) "ABI versioning"
+# section for why a mismatched copy is a memory-safety bug, not a build
+# warning. Pointing at a *different clone* of the same source (even if
+# byte-identical) is fine as long as `PLUGIN_ABI_VERSION` matches — what
+# actually matters is that both sides were compiled by the same rustc
+# version (see src/lib.rs's module docs: `repr(Rust)` layout isn't
+# guaranteed stable across compiler versions, and the ABI version constant
+# can't detect that on its own).
+cogitator-plugin-api = { path = "../cogitator-plugin-api" }
+
+# Needed to implement the `async fn` methods of `CogitatorPlugin` — the
+# trait itself is defined with `#[async_trait]` in cogitator-plugin-api, and
+# every implementation needs the same macro. Pinned to the EXACT version
+# cogitator-plugin-api's own Cargo.toml uses (not just a compatible "0.1"
+# range) — see src/lib.rs's comment on the `impl` block for why a version
+# skew here is worth avoiding even though it would likely still compile.
+async-trait = "0.1.89"
+
+# Pattern-matching for the secret signatures this plugin looks for. Not a
+# requirement of the plugin API itself — plugins can use whatever
+# dependencies they like, same as any other Rust crate.
+regex = "1"
+
+[dev-dependencies]
+# Only needed to run this crate's own `#[tokio::test]`s (see the `tests`
+# module at the bottom of src/lib.rs). Cogitator itself provides the async
+# runtime your plugin's hooks actually run under — you don't need `tokio`
+# as a runtime dependency to *use* the plugin, only to unit-test it here in
+# isolation.
+tokio = { version = "1", features = ["macros", "rt"] }

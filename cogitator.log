@@ -1,0 +1,72 @@
+{"timestamp":"2026-07-01T20:40:59.186113Z","level":"INFO","fields":{"message":"TLS MITM: loaded existing local CA from cogitator_ca.pem"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-01T20:40:59.186495Z","level":"INFO","fields":{"message":"Startup: loaded existing local MITM CA from cogitator_ca.pem."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-01T20:40:59.189295Z","level":"INFO","fields":{"message":"Proxy Guard successfully initialized on 127.0.0.1:8080"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-01T20:40:59.189552Z","level":"INFO","fields":{"message":"Proxy Guard TLS MITM CA ready at cogitator_ca.pem — import it into your client's trust store to intercept HTTPS (CONNECT) traffic without certificate warnings."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-01T20:41:16.256060Z","level":"INFO","fields":{"message":"Workspace auto-saved to cogitator_last.cogitator"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-01T20:41:16.256420Z","level":"INFO","fields":{"message":"Proxy Guard accept loop stopping (shutdown requested)"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-01T20:41:16.256883Z","level":"INFO","fields":{"message":"Proxy Guard shutdown complete"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-01T21:14:02.495360Z","level":"INFO","fields":{"message":"TLS MITM: loaded existing local CA from cogitator_ca.pem"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-01T21:14:02.495987Z","level":"INFO","fields":{"message":"Startup: loaded existing local MITM CA from cogitator_ca.pem."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-01T21:14:02.496244Z","level":"INFO","fields":{"message":"Plugin system initialized with 1 built-in plugin(s)"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-01T21:14:02.498262Z","level":"INFO","fields":{"message":"Proxy Guard successfully initialized on 127.0.0.1:8080"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-01T21:14:02.498541Z","level":"INFO","fields":{"message":"Proxy Guard TLS MITM CA ready at cogitator_ca.pem — import it into your client's trust store to intercept HTTPS (CONNECT) traffic without certificate warnings."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-01T21:21:49.471393Z","level":"INFO","fields":{"message":"Workspace auto-saved to cogitator_last.cogitator"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-01T21:21:49.472056Z","level":"INFO","fields":{"message":"Proxy Guard accept loop stopping (shutdown requested)"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-01T21:21:49.472485Z","level":"INFO","fields":{"message":"Proxy Guard shutdown complete"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-04T08:56:24.648670Z","level":"INFO","fields":{"message":"TLS MITM: loaded existing local CA from cogitator_ca.pem"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-04T08:56:24.650149Z","level":"INFO","fields":{"message":"Startup: loaded existing local MITM CA from cogitator_ca.pem."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-04T08:56:24.650574Z","level":"INFO","fields":{"message":"Plugin system initialized with 1 built-in plugin(s)"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-04T08:56:24.654481Z","level":"INFO","fields":{"message":"Proxy Guard successfully initialized on 127.0.0.1:8080"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-04T08:56:24.655021Z","level":"INFO","fields":{"message":"Proxy Guard TLS MITM CA ready at cogitator_ca.pem — import it into your client's trust store to intercept HTTPS (CONNECT) traffic without certificate warnings."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-04T09:03:29.344510Z","level":"INFO","fields":{"message":"Workspace auto-saved to cogitator_last.cogitator"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-04T09:03:29.345172Z","level":"INFO","fields":{"message":"Proxy Guard accept loop stopping (shutdown requested)"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-04T09:03:29.345699Z","level":"INFO","fields":{"message":"Proxy Guard shutdown complete"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-04T20:40:39.232736Z","level":"INFO","fields":{"message":"TLS MITM: loaded existing local CA from cogitator_ca.pem"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-04T20:40:39.233543Z","level":"INFO","fields":{"message":"Startup: loaded existing local MITM CA from cogitator_ca.pem."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-04T20:40:39.233834Z","level":"INFO","fields":{"message":"Plugin system initialized with 1 built-in plugin(s)"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-04T20:40:39.235787Z","level":"INFO","fields":{"message":"Proxy Guard successfully initialized on 127.0.0.1:8080"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-04T20:40:39.236083Z","level":"INFO","fields":{"message":"Proxy Guard TLS MITM CA ready at cogitator_ca.pem — import it into your client's trust store to intercept HTTPS (CONNECT) traffic without certificate warnings."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-04T20:40:39.491215Z","level":"INFO","fields":{"message":"OOB domain not configured (config::OOB_DOMAIN is empty) — SSRF's OOB phase and the XXE check are disabled. Set config::OOB_DOMAIN to a domain you control to enable them."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-04T20:41:46.665990Z","level":"INFO","fields":{"message":"Workspace auto-saved to cogitator_last.cogitator"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-04T20:41:46.666657Z","level":"INFO","fields":{"message":"Proxy Guard accept loop stopping (shutdown requested)"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-04T20:41:46.666969Z","level":"INFO","fields":{"message":"Proxy Guard shutdown complete"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-05T20:10:43.687795Z","level":"INFO","fields":{"message":"TLS MITM: loaded existing local CA from cogitator_ca.pem"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-05T20:10:43.688670Z","level":"INFO","fields":{"message":"Startup: loaded existing local MITM CA from cogitator_ca.pem."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-05T20:10:43.689030Z","level":"INFO","fields":{"message":"Plugin system initialized with 1 built-in plugin(s)"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-05T20:10:43.691530Z","level":"INFO","fields":{"message":"Proxy Guard successfully initialized on 127.0.0.1:8080"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-05T20:10:43.691986Z","level":"INFO","fields":{"message":"Proxy Guard TLS MITM CA ready at cogitator_ca.pem — import it into your client's trust store to intercept HTTPS (CONNECT) traffic without certificate warnings."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-05T20:10:43.902079Z","level":"INFO","fields":{"message":"OOB domain not configured (config::OOB_DOMAIN is empty) — SSRF's OOB phase and the XXE check are disabled. Set config::OOB_DOMAIN to a domain you control to enable them."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-05T20:10:47.519739Z","level":"INFO","fields":{"message":"Workspace auto-saved to cogitator_last.cogitator"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-05T20:10:47.520274Z","level":"INFO","fields":{"message":"Proxy Guard accept loop stopping (shutdown requested)"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-05T20:10:47.520617Z","level":"INFO","fields":{"message":"Proxy Guard shutdown complete"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-06T09:41:50.699174Z","level":"INFO","fields":{"message":"TLS MITM: loaded existing local CA from cogitator_ca.pem"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-06T09:41:50.700945Z","level":"INFO","fields":{"message":"Startup: loaded existing local MITM CA from cogitator_ca.pem."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-06T09:41:50.701810Z","level":"INFO","fields":{"message":"Plugin system initialized with 1 built-in plugin(s)"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-06T09:41:50.707422Z","level":"INFO","fields":{"message":"Proxy Guard successfully initialized on 127.0.0.1:8080"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-06T09:41:50.708167Z","level":"INFO","fields":{"message":"Proxy Guard TLS MITM CA ready at cogitator_ca.pem — import it into your client's trust store to intercept HTTPS (CONNECT) traffic without certificate warnings."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-06T09:41:51.262126Z","level":"INFO","fields":{"message":"OOB domain not configured (config::OOB_DOMAIN is empty) — SSRF's OOB phase and the XXE check are disabled. Set config::OOB_DOMAIN to a domain you control to enable them."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-06T09:44:34.035494Z","level":"INFO","fields":{"message":"⚠️  CRITICAL: Process 'chrome.exe' (PID: 27708) consuming 103% CPU!"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-06T09:44:39.046881Z","level":"INFO","fields":{"message":"⚠️  CRITICAL: Process 'chrome.exe' (PID: 27708) consuming 103% CPU!"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-06T09:44:49.158583Z","level":"INFO","fields":{"message":"⚠️  CRITICAL: Process 'rustrover64.exe' (PID: 3956) consuming 122% CPU!"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-06T09:44:54.166836Z","level":"INFO","fields":{"message":"⚠️  CRITICAL: Process 'claude.exe' (PID: 15580) consuming 101% CPU!"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-06T09:44:57.105224Z","level":"INFO","fields":{"message":"Workspace auto-saved to cogitator_last.cogitator"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-06T09:44:57.106085Z","level":"INFO","fields":{"message":"Proxy Guard accept loop stopping (shutdown requested)"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-06T09:44:57.106814Z","level":"INFO","fields":{"message":"Proxy Guard shutdown complete"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-07T23:18:32.878265Z","level":"INFO","fields":{"message":"TLS MITM: loaded existing local CA from cogitator_ca.pem"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-07T23:18:32.879057Z","level":"INFO","fields":{"message":"Startup: loaded existing local MITM CA from cogitator_ca.pem."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-07T23:18:32.879905Z","level":"INFO","fields":{"message":"plugin: loaded \"./plugins\\\\example_plugin.dll\" (secrets-in-response-detector)"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-07T23:18:32.880098Z","level":"INFO","fields":{"message":"Plugin registered: secrets-in-response-detector"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-07T23:18:32.880236Z","level":"INFO","fields":{"message":"Plugin system initialized with 2 built-in plugin(s)"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-07T23:18:32.881761Z","level":"INFO","fields":{"message":"Proxy Guard successfully initialized on 127.0.0.1:8080"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-07T23:18:32.881936Z","level":"INFO","fields":{"message":"Proxy Guard TLS MITM CA ready at cogitator_ca.pem — import it into your client's trust store to intercept HTTPS (CONNECT) traffic without certificate warnings."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-07T23:18:33.101327Z","level":"INFO","fields":{"message":"OOB domain not configured (config::OOB_DOMAIN is empty) — SSRF's OOB phase and the XXE check are disabled. Set config::OOB_DOMAIN to a domain you control to enable them."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-07T23:22:52.523101Z","level":"INFO","fields":{"message":"Workspace auto-saved to cogitator_last.cogitator"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-07T23:22:52.523459Z","level":"INFO","fields":{"message":"Proxy Guard accept loop stopping (shutdown requested)"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-07T23:22:52.523588Z","level":"INFO","fields":{"message":"Proxy Guard shutdown complete"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-08T20:11:03.319417Z","level":"INFO","fields":{"message":"TLS MITM: loaded existing local CA from cogitator_ca.pem"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-08T20:11:03.319788Z","level":"INFO","fields":{"message":"Startup: loaded existing local MITM CA from cogitator_ca.pem."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-08T20:11:03.321076Z","level":"INFO","fields":{"message":"Proxy Guard successfully initialized on 127.0.0.1:8080"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-08T20:11:03.321256Z","level":"INFO","fields":{"message":"Proxy Guard TLS MITM CA ready at cogitator_ca.pem — import it into your client's trust store to intercept HTTPS (CONNECT) traffic without certificate warnings."},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-08T20:11:19.872868Z","level":"INFO","fields":{"message":"Workspace auto-saved to cogitator_last.cogitator"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-08T20:11:19.873280Z","level":"INFO","fields":{"message":"Proxy Guard accept loop stopping (shutdown requested)"},"target":"Cogitator::logger"}
+{"timestamp":"2026-07-08T20:11:19.873596Z","level":"INFO","fields":{"message":"Proxy Guard shutdown complete"},"target":"Cogitator::logger"}

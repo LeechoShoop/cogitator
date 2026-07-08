@@ -1,0 +1,11 @@
+[package]
+name = "cogitator-plugin-api"
+version = "0.8.0"
+edition = "2024"
+
+# Keep this crate's dependency list minimal and pinned — its whole purpose
+# is to be the one shared ABI contract between the main binary and any
+# external .so plugin. Any version drift here vs the main crate re-introduces
+# the layout mismatch this crate exists to prevent.
+[dependencies]
+async-trait = "0.1.89"
