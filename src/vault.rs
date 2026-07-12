@@ -35,6 +35,62 @@ use rand::RngCore;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
+// ─── Error type ───────────────────────────────────────────────────────────────
+
+/// All errors that can arise inside this module. The public
+/// `encrypt_to_file`/`decrypt_from_file` functions convert this into
+/// `io::Error` at the module boundary via the `From` implementation below,
+/// so callers never need to name this type.
+#[derive(Debug, thiserror::Error)]
+pub enum VaultError {
+    /// Argon2id key-derivation failed (internal error string from the crate).
+    #[error("Argon2id key derivation failed: {0}")]
+    KeyDerivation(String),
+
+    /// AES-256-GCM key construction rejected the derived bytes (should never
+    /// happen in practice since we always produce exactly 32 bytes).
+    #[error("bad AES-256 key length: {0}")]
+    BadKeyLength(String),
+
+    /// AES-GCM authenticated encryption failed.
+    #[error("AES-GCM encryption failed: {0}")]
+    Encryption(String),
+
+    /// AES-GCM authentication-tag check failed. AES-GCM cannot distinguish a
+    /// wrong passphrase from a tampered/corrupted file — the remedy is the
+    /// same either way.
+    #[error("decryption failed \u2014 wrong passphrase or corrupted file")]
+    WrongPassphraseOrCorrupted,
+
+    /// The file's `format` field doesn't match `FORMAT_MARKER`.
+    #[error("not a Cogitator vault file (format marker was '{found}')")]
+    UnknownFormat { found: String },
+
+    /// The stored nonce has a length we don't expect.
+    #[error("corrupt vault file: unexpected nonce length")]
+    MalformedEnvelope,
+
+    /// JSON serialisation / deserialisation error (wraps `serde_json::Error`).
+    #[error("serialisation error: {0}")]
+    Serialise(#[from] serde_json::Error),
+
+    /// Underlying filesystem I/O error (pass-through).
+    #[error(transparent)]
+    Io(#[from] io::Error),
+}
+
+impl From<VaultError> for io::Error {
+    fn from(e: VaultError) -> Self {
+        match e {
+            // Unwrap the inner io::Error rather than double-wrapping.
+            VaultError::Io(inner) => inner,
+            // Everything else maps to InvalidData, preserving the typed
+            // Display message as the error description.
+            other => io::Error::new(io::ErrorKind::InvalidData, other),
+        }
+    }
+}
+
 /// Marker written into every envelope's `format` field. `decrypt_from_file`
 /// rejects anything else; `is_encrypted_file` uses it to distinguish a vault
 /// envelope from a legacy plaintext file (or anything else at that path)
@@ -74,13 +130,11 @@ struct Envelope {
 /// Deliberately not tunable from the CLI: every vault file uses the same KDF
 /// cost, so a file saved on one machine decrypts the same way on another
 /// without needing to persist the parameters alongside it.
-fn derive_key(passphrase: &str, salt: &[u8]) -> io::Result<[u8; KEY_LEN]> {
+fn derive_key(passphrase: &str, salt: &[u8]) -> Result<[u8; KEY_LEN], VaultError> {
     let mut key = [0u8; KEY_LEN];
     Argon2::default()
         .hash_password_into(passphrase.as_bytes(), salt, &mut key)
-        .map_err(|e| {
-            io::Error::new(io::ErrorKind::InvalidInput, format!("Argon2id key derivation failed: {e}"))
-        })?;
+        .map_err(|e| VaultError::KeyDerivation(e.to_string()))?;
     Ok(key)
 }
 
@@ -96,23 +150,30 @@ where
     T: Serialize,
     P: AsRef<Path>,
 {
-    let plaintext = serde_json::to_vec(data)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+    encrypt_to_file_inner(data, path, passphrase).map_err(io::Error::from)
+}
+
+fn encrypt_to_file_inner<T, P>(data: &T, path: P, passphrase: &str) -> Result<(), VaultError>
+where
+    T: Serialize,
+    P: AsRef<Path>,
+{
+    let plaintext = serde_json::to_vec(data)?;
 
     let mut salt = [0u8; SALT_LEN];
     OsRng.fill_bytes(&mut salt);
     let key_bytes = derive_key(passphrase, &salt)?;
 
     let cipher = Aes256Gcm::new_from_slice(&key_bytes)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("bad AES key: {e}")))?;
+        .map_err(|e| VaultError::BadKeyLength(e.to_string()))?;
 
     let mut nonce_bytes = [0u8; NONCE_LEN];
     OsRng.fill_bytes(&mut nonce_bytes);
     let nonce = Nonce::from_slice(&nonce_bytes);
 
-    let ciphertext = cipher.encrypt(nonce, plaintext.as_ref()).map_err(|e| {
-        io::Error::new(io::ErrorKind::InvalidData, format!("AES-GCM encryption failed: {e}"))
-    })?;
+    let ciphertext = cipher
+        .encrypt(nonce, plaintext.as_ref())
+        .map_err(|e| VaultError::Encryption(e.to_string()))?;
 
     let envelope = Envelope {
         format: FORMAT_MARKER.to_string(),
@@ -121,9 +182,8 @@ where
         ciphertext_b64: base64_encode(&ciphertext),
     };
 
-    let json = serde_json::to_string_pretty(&envelope)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-    std::fs::write(path, json)
+    let json = serde_json::to_string_pretty(&envelope)?;
+    std::fs::write(path, json).map_err(VaultError::Io)
 }
 
 /// Read an envelope from `path`, derive the key from `passphrase` + the
@@ -138,15 +198,19 @@ where
     T: DeserializeOwned,
     P: AsRef<Path>,
 {
+    decrypt_from_file_inner(path, passphrase).map_err(io::Error::from)
+}
+
+fn decrypt_from_file_inner<T, P>(path: P, passphrase: &str) -> Result<T, VaultError>
+where
+    T: DeserializeOwned,
+    P: AsRef<Path>,
+{
     let contents = std::fs::read_to_string(path)?;
-    let envelope: Envelope = serde_json::from_str(&contents)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+    let envelope: Envelope = serde_json::from_str(&contents)?;
 
     if envelope.format != FORMAT_MARKER {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!("not a Cogitator vault file (format marker was '{}')", envelope.format),
-        ));
+        return Err(VaultError::UnknownFormat { found: envelope.format });
     }
 
     let salt = base64_decode(&envelope.salt_b64);
@@ -154,25 +218,19 @@ where
     let ciphertext = base64_decode(&envelope.ciphertext_b64);
 
     if nonce_bytes.len() != NONCE_LEN {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "corrupt vault file: unexpected nonce length",
-        ));
+        return Err(VaultError::MalformedEnvelope);
     }
 
     let key_bytes = derive_key(passphrase, &salt)?;
     let cipher = Aes256Gcm::new_from_slice(&key_bytes)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("bad AES key: {e}")))?;
+        .map_err(|e| VaultError::BadKeyLength(e.to_string()))?;
     let nonce = Nonce::from_slice(&nonce_bytes);
 
-    let plaintext = cipher.decrypt(nonce, ciphertext.as_ref()).map_err(|_| {
-        io::Error::new(
-            io::ErrorKind::InvalidData,
-            "decryption failed — wrong passphrase or corrupted file",
-        )
-    })?;
+    let plaintext = cipher
+        .decrypt(nonce, ciphertext.as_ref())
+        .map_err(|_| VaultError::WrongPassphraseOrCorrupted)?;
 
-    serde_json::from_slice(&plaintext).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    Ok(serde_json::from_slice(&plaintext)?)
 }
 
 /// `true` if `path` looks like a vault envelope rather than a legacy

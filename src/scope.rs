@@ -18,6 +18,37 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::Path;
 
+// ─── Error type ───────────────────────────────────────────────────────────────
+
+/// Errors that can arise when loading or saving scope rules.
+#[derive(Debug, thiserror::Error)]
+pub enum ScopeError {
+    /// A regex pattern stored in the rules file was rejected by the `regex` crate.
+    #[error("invalid scope rule regex '{pattern}': {source}")]
+    InvalidRegex {
+        pattern: String,
+        #[source]
+        source: regex::Error,
+    },
+
+    /// A line in the NDJSON rules file could not be deserialised.
+    #[error("malformed scope rule record: {0}")]
+    MalformedRecord(#[from] serde_json::Error),
+
+    /// Underlying filesystem I/O error (pass-through).
+    #[error(transparent)]
+    Io(#[from] io::Error),
+}
+
+impl From<ScopeError> for io::Error {
+    fn from(e: ScopeError) -> Self {
+        match e {
+            ScopeError::Io(inner) => inner,
+            other => io::Error::new(io::ErrorKind::InvalidData, other),
+        }
+    }
+}
+
 /// On-disk representation of a single rule (NDJSON line). `Regex` itself
 /// isn't `Serialize`/`Deserialize`, so this mirrors `ScopeRule` using the
 /// raw pattern string instead of the compiled `Regex`.
@@ -105,6 +136,10 @@ impl Scope {
     /// Load rules from a newline-delimited JSON file, replacing any rules
     /// currently held. Blank lines are skipped.
     pub fn load_from_file<P: AsRef<Path>>(&mut self, path: P) -> io::Result<()> {
+        self.load_from_file_inner(path).map_err(io::Error::from)
+    }
+
+    fn load_from_file_inner<P: AsRef<Path>>(&mut self, path: P) -> Result<(), ScopeError> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
         let mut loaded = Vec::new();
@@ -115,10 +150,11 @@ impl Scope {
             if line.is_empty() {
                 continue;
             }
-            let record: ScopeRuleRecord = serde_json::from_str(line)
-                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-            let compiled = Regex::new(&record.pattern)
-                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+            let record: ScopeRuleRecord = serde_json::from_str(line)?;
+            let compiled = Regex::new(&record.pattern).map_err(|e| ScopeError::InvalidRegex {
+                pattern: record.pattern.clone(),
+                source: e,
+            })?;
             loaded.push(ScopeRule { pattern: compiled, include: record.include });
         }
 
@@ -128,14 +164,17 @@ impl Scope {
 
     /// Save current rules as newline-delimited JSON, overwriting `path`.
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
+        self.save_to_file_inner(path).map_err(io::Error::from)
+    }
+
+    fn save_to_file_inner<P: AsRef<Path>>(&self, path: P) -> Result<(), ScopeError> {
         let mut file = File::create(path)?;
         for rule in &self.0 {
             let record = ScopeRuleRecord {
                 pattern: rule.pattern.as_str().to_string(),
                 include: rule.include,
             };
-            let line = serde_json::to_string(&record)
-                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+            let line = serde_json::to_string(&record)?;
             writeln!(file, "{}", line)?;
         }
         Ok(())

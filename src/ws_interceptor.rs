@@ -57,6 +57,44 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt, ReadHalf, WriteHalf};
 use tokio::net::TcpStream;
 use tokio_rustls::TlsConnector;
 
+// ─── Error type ───────────────────────────────────────────────────────────────
+
+/// Errors that can arise during WebSocket interception. Used internally by
+/// `dial_origin` and `perform_origin_handshake`; converted to `io::Error`
+/// at the module boundary so callers see a uniform `io::Result`.
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum WsError {
+    /// The origin hostname cannot be used as a TLS SNI server name.
+    #[error("invalid origin hostname for TLS SNI")]
+    InvalidSniHostname,
+
+    /// The TLS handshake with the real origin failed.
+    #[error("origin TLS handshake failed: {0}")]
+    TlsHandshake(String),
+
+    /// The origin's HTTP upgrade response exceeded the buffer limit before we
+    /// saw the terminating blank line.
+    #[error("origin WS handshake response too large")]
+    HandshakeResponseTooLarge,
+
+    /// The origin returned something other than `101 Switching Protocols`.
+    #[error("origin rejected WebSocket upgrade: {status_line}")]
+    UpgradeRejected { status_line: String },
+
+    /// Underlying I/O error (pass-through).
+    #[error(transparent)]
+    Io(#[from] io::Error),
+}
+
+impl From<WsError> for io::Error {
+    fn from(e: WsError) -> Self {
+        match e {
+            WsError::Io(inner) => inner,
+            other => io::Error::new(io::ErrorKind::InvalidData, other),
+        }
+    }
+}
+
 /// Monotonic id generator for WS frame `RequestRecord`s. Separate from
 /// `proxy_guard::HISTORY_REQUEST_ID` / `InterceptorEngine::request_counter`
 /// since this module pushes straight into `History` without going through
@@ -322,6 +360,10 @@ type BoxedWrite = Box<dyn tokio::io::AsyncWrite + Unpin + Send>;
 /// since that function buffers a full HTTP response rather than handing
 /// back a live duplex stream — not reusable for an upgrade.
 async fn dial_origin(host: &str, use_tls: bool) -> io::Result<(BoxedRead, BoxedWrite)> {
+    dial_origin_inner(host, use_tls).await.map_err(io::Error::from)
+}
+
+async fn dial_origin_inner(host: &str, use_tls: bool) -> Result<(BoxedRead, BoxedWrite), WsError> {
     let (bare_host, port) = match host.rsplit_once(':') {
         Some((h, p)) => match p.parse::<u16>() {
             Ok(port) => (h, port),
@@ -334,12 +376,12 @@ async fn dial_origin(host: &str, use_tls: bool) -> io::Result<(BoxedRead, BoxedW
 
     if use_tls {
         let server_name = ServerName::try_from(bare_host.to_string())
-            .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid origin hostname for TLS SNI"))?;
+            .map_err(|_| WsError::InvalidSniHostname)?;
         let connector = TlsConnector::from(tls_mitm::origin_client_config());
         let tls_stream = connector
             .connect(server_name, tcp)
             .await
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("origin TLS handshake failed: {e}")))?;
+            .map_err(|e| WsError::TlsHandshake(e.to_string()))?;
         let (r, w) = tokio::io::split(tls_stream);
         Ok((Box::new(r), Box::new(w)))
     } else {
@@ -358,6 +400,18 @@ async fn perform_origin_handshake(
     path: &str,
     client_key: &str,
 ) -> io::Result<()> {
+    perform_origin_handshake_inner(writer, reader, bare_host, path, client_key)
+        .await
+        .map_err(io::Error::from)
+}
+
+async fn perform_origin_handshake_inner(
+    writer: &mut BoxedWrite,
+    reader: &mut BoxedRead,
+    bare_host: &str,
+    path: &str,
+    client_key: &str,
+) -> Result<(), WsError> {
     let request = format!(
         "GET {path} HTTP/1.1\r\n\
          Host: {bare_host}\r\n\
@@ -382,17 +436,14 @@ async fn perform_origin_handshake(
             break;
         }
         if header_bytes.len() > 8192 {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "origin handshake response too large"));
+            return Err(WsError::HandshakeResponseTooLarge);
         }
     }
 
     let header_text = String::from_utf8_lossy(&header_bytes);
     let status_line = header_text.lines().next().unwrap_or("");
     if !status_line.contains("101") {
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!("origin rejected WebSocket upgrade: {status_line}"),
-        ));
+        return Err(WsError::UpgradeRejected { status_line: status_line.to_string() });
     }
 
     Ok(())

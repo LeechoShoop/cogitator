@@ -26,6 +26,29 @@ use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
 
+// ─── Error type ───────────────────────────────────────────────────────────────
+
+/// Errors that can arise when persisting or loading the workspace.
+#[derive(Debug, thiserror::Error)]
+pub enum WorkspaceError {
+    /// Failed to serialise or deserialise the workspace JSON.
+    #[error("failed to serialise workspace: {0}")]
+    Serialise(#[from] serde_json::Error),
+
+    /// Underlying filesystem I/O error (pass-through).
+    #[error(transparent)]
+    Io(#[from] io::Error),
+}
+
+impl From<WorkspaceError> for io::Error {
+    fn from(e: WorkspaceError) -> Self {
+        match e {
+            WorkspaceError::Io(inner) => inner,
+            other => io::Error::new(io::ErrorKind::InvalidData, other),
+        }
+    }
+}
+
 use crate::history::History;
 use crate::repeater::RepeaterEngine;
 use crate::scanner::ScanFinding;
@@ -310,16 +333,22 @@ impl WorkspaceData {
     /// Serialise `self` to a pretty-printed JSON file at `path`, creating or
     /// overwriting it.
     pub fn save<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
-        let json = serde_json::to_string_pretty(self)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-        std::fs::write(path, json)
+        self.save_inner(path).map_err(io::Error::from)
+    }
+
+    fn save_inner<P: AsRef<Path>>(&self, path: P) -> Result<(), WorkspaceError> {
+        let json = serde_json::to_string_pretty(self)?;
+        std::fs::write(path, json).map_err(WorkspaceError::Io)
     }
 
     /// Deserialise a `WorkspaceData` from a `.cogitator` JSON file.
     pub fn load<P: AsRef<Path>>(path: P) -> io::Result<Self> {
+        Self::load_inner(path).map_err(io::Error::from)
+    }
+
+    fn load_inner<P: AsRef<Path>>(path: P) -> Result<Self, WorkspaceError> {
         let contents = std::fs::read_to_string(path)?;
-        serde_json::from_str(&contents)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+        Ok(serde_json::from_str(&contents)?)
     }
 
     // ── Restoration ───────────────────────────────────────────────────────────
