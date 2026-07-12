@@ -59,7 +59,7 @@ pub enum VaultError {
     /// AES-GCM authentication-tag check failed. AES-GCM cannot distinguish a
     /// wrong passphrase from a tampered/corrupted file — the remedy is the
     /// same either way.
-    #[error("decryption failed \u2014 wrong passphrase or corrupted file")]
+    #[error("decryption failed \u{2014} wrong passphrase or corrupted file")]
     WrongPassphraseOrCorrupted,
 
     /// The file's `format` field doesn't match `FORMAT_MARKER`.
@@ -72,11 +72,23 @@ pub enum VaultError {
 
     /// JSON serialisation / deserialisation error (wraps `serde_json::Error`).
     #[error("serialisation error: {0}")]
-    Serialise(#[from] serde_json::Error),
+    Serialise(serde_json::Error),
 
     /// Underlying filesystem I/O error (pass-through).
     #[error(transparent)]
-    Io(#[from] io::Error),
+    Io(io::Error),
+}
+
+impl From<serde_json::Error> for VaultError {
+    fn from(e: serde_json::Error) -> Self {
+        Self::Serialise(e)
+    }
+}
+
+impl From<io::Error> for VaultError {
+    fn from(e: io::Error) -> Self {
+        Self::Io(e)
+    }
 }
 
 impl From<VaultError> for io::Error {

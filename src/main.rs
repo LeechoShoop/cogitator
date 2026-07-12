@@ -33,6 +33,7 @@ mod scanner;
 mod checks;
 mod spider;
 mod session;
+mod vault;
 mod workspace;
 mod plugin;
 
@@ -202,7 +203,6 @@ fn main() -> Result<(), io::Error> {
 
     // ── Workspace: auto-restore prompt ────────────────────────────────────────
     let last_ws_path = std::path::Path::new(workspace::LAST_WORKSPACE_FILE);
-    let mut startup_ws_to_offer: Option<workspace::WorkspaceData> = None;
 
     if let Some(ref path) = cli_workspace {
         // CLI argument given — load immediately and silently.
@@ -242,7 +242,6 @@ fn main() -> Result<(), io::Error> {
         // or delete it and type something else.
         match workspace::WorkspaceData::load(last_ws_path) {
             Ok(ws) => {
-                startup_ws_to_offer = Some(ws);
                 output_buffer = format!(
                     "💾 Found auto-save '{}'. Run  Workspace-Load {}  to restore it, \
                      or type any other command to continue fresh.",
