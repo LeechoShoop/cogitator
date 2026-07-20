@@ -26,6 +26,7 @@ Cogitator integrates a multitude of offensive and analytical modules into a sing
 | **Interceptor (Frozen Mode)** | Pauses live proxy traffic. Operators can *Forward*, *Drop*, or *Modify* headers/bodies before they hit the wire. |
 | **Repeater** | A multi-tab environment for taking historical requests, modifying them manually, and replaying them. |
 | **Active Scanner** | Discovers vulnerabilities automatically (SQLi, XSS, Path Traversal) with a concurrent, rate-limited execution engine. |
+| **Distributed Scanner**| Offloads active scanning tasks to remote `cogitator-worker` nodes. See [`distributed scanning setup.md`](distributed%20scanning%20setup.md). |
 | **Scan Diff** | Compares active scan results across multiple runs to track regressions or newly patched vulnerabilities. |
 | **Intruder** | Payload fuzzer supporting Sniper, Battering Ram, Pitchfork, and Cluster Bomb attack types via custom wordlists. |
 | **Spider** | BFS crawler that extracts links and forms, respects `robots.txt`, and features an optional **headless browser (JS)** engine (via `chromiumoxide`) for crawling SPAs. |
@@ -103,6 +104,7 @@ The TUI accepts commands at the bottom prompt. Use `Tab` to cycle between screen
 ╠═══════════════════════════════════════════════════════╣
 ║  SCANNER                                               ║
 ║    Scan-Site <domain>    Active-scan discovered forms  ║
+║    Scan-Site-Distributed Active-scan using remote nodes║
 ║    Scan-Request <id>     Active-scan a history record  ║
 ║    Scan-Diff             Compare latest vs prior scan  ║
 ╠═══════════════════════════════════════════════════════╣
@@ -151,7 +153,7 @@ Cogitator is designed as a Cargo workspace with a clear separation of concerns b
 ### 📦 Workspace Crates
 - **`cogitator-plugin-api`**: The stable FFI interface defining the `CogitatorPlugin` trait. Acts as the unyielding contract that external `.so`/`.dll` plugins must implement to hook into the proxy lifecycle.
 - **`example-plugin`**: A reference implementation demonstrating how to build a dynamic library that integrates with Cogitator.
-- **`cogitator-worker`**: Contains background data structures and detached worker threads that offload heavy computations from the main asynchronous runtime.
+- **`cogitator-worker`**: Contains background data structures and detached worker threads that offload heavy computations from the main asynchronous runtime. For setup and usage, see [**distributed scanning setup.md**](distributed%20scanning%20setup.md).
 
 ### 🧠 Core Engine (`src/`)
 
