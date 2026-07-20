@@ -3,6 +3,86 @@
 All notable changes to Cogitator are documented in this file.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.9.0] — 2026-07-20
+
+Tech-debt pass: all 11 items from the post-0.8.0 backlog
+(`tech_debt_backlog.html`) are closed. No user-facing behavior change —
+this release is entirely internal structure, error handling, and
+crawler hardening.
+
+### Command dispatch
+- `main.rs`'s ~90-arm command `match` replaced with a table-driven
+  registry (`AppState` + handler functions), grouped by command prefix
+  into separate modules (`commands/scan.rs`, `commands/workspace.rs`,
+  `commands/scope.rs`, etc.). Command names and behavior preserved
+  exactly; this was a structural refactor only.
+
+### Error handling
+- `vault.rs`, `ws_interceptor.rs`, `scope.rs`, and `workspace.rs` no
+  longer build errors as `io::Error::new(io::ErrorKind::InvalidData,
+  format!(...))`. Replaced with proper `thiserror`-based error enums
+  that distinguish actual failure causes (e.g. wrong passphrase vs.
+  corrupt file vs. invalid regex), with `From<Error> for io::Error`
+  at module boundaries to keep external `io::Result` signatures intact.
+- Audited every non-test `.unwrap()`/`.expect()` in `session.rs`,
+  `spider.rs`, `workspace.rs`, `oob.rs`, and `tls_mitm.rs`. Calls driven
+  by external input (file I/O, network responses, parsing) now
+  propagate `Result` instead of panicking mid-engagement; mutex-lock
+  unwraps were left as-is.
+
+### Module splits
+- `styletui.rs` (2,720 lines) split into per-screen submodules
+  (`styletui/scanner_view.rs`, `findings_view.rs`,
+  `interceptor_view.rs`, `repeater_view.rs`, `intruder_view.rs`,
+  `spider_view.rs`), re-exported unchanged from `styletui.rs`.
+- `web_analyzer.rs` (2,008 lines) split by analysis concern into
+  submodules under `web_analyzer/`, re-exported unchanged from
+  `web_analyzer/mod.rs`.
+- `workspace.rs` (1,057 lines) split into `workspace/data.rs`
+  (serialization, load/save, vault-backed encryption) and
+  `workspace/prompt.rs` (TUI prompt state machine), on top of the new
+  error type from the error-handling pass above.
+- `spider.rs` (1,022 lines) split into `spider/robots.rs`
+  (robots.txt caching) and `spider/extract.rs` (HTML link/form
+  extraction), leaving `spider.rs` responsible for crawl orchestration
+  only.
+
+### Crawler: production scale
+- BFS crawl loop replaced with a semaphore-capped worker pool (same
+  pattern as `scanner.rs`'s `ScanQueue`), with a `Mutex<HashSet<String>>`
+  visited-set so concurrent fetches can't duplicate a URL. `max_pages`/
+  `max_depth` remain correctly enforced under concurrency.
+- Regex-based `extract_links`/`extract_forms` replaced with the
+  `scraper` crate (already a workspace dependency), including `<base
+  href>` handling.
+- `parse_robots` now honors `Crawl-delay` in addition to `Disallow`,
+  with a per-origin minimum delay between requests (no delay by
+  default, unless the target's robots.txt specifies one).
+- `SpiderConfig`/`SpiderResult` public shape unchanged.
+
+### Cleanup
+- Deduplicated timestamp formatting between `report.rs`
+  (`format_timestamp_utc`) and `report_pdf.rs`
+  (`format_timestamp_for_pdf`) into a shared `report/format.rs`, along
+  with the duplicated severity-grouping/finding-sorting logic used by
+  both renderers. HTML/PDF output unchanged.
+- Audited `.clone()` call sites in `main.rs`, `proxy_guard.rs`, and
+  `workspace.rs` (the three highest-density files); replaced
+  unnecessary clones with borrows or `Arc` sharing where the type
+  already supported it, and commented the ones kept intentionally.
+
+### Distributed scanning
+- Added optional per-worker bearer tokens (`worker base URL → token`
+  map) in `worker_protocol.rs`/`distributed.rs`, backward-compatible
+  with the single shared-token setup. TLS between coordinator and
+  workers remains out of scope, per `SECURITY.md`.
+  `distributed_scanning_setup.md` updated accordingly.
+
+### CI
+- `clippy` in `.github/workflows/ci.yml` no longer runs with
+  `continue-on-error: true`, now that the backlog it was staged
+  against is clear.
+
 ## [0.8.0] — 2026-07-08
 
 First tagged public release. Cogitator is a Rust TLS MITM proxy and
