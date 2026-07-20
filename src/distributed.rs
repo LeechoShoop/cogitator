@@ -16,6 +16,7 @@
 //! before dispatch: this proves the architecture works, it isn't a fleet
 //! manager.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use reqwest::Client;
@@ -24,6 +25,24 @@ use tokio::sync::Semaphore;
 use crate::logger;
 use crate::scanner::{ScanFinding, ScanTarget};
 use crate::worker_protocol::{ScanRequest, ScanResponse, ALL_CHECK_NAMES};
+
+/// Strategy for authenticating with distributed workers.
+#[derive(Debug, Clone)]
+pub enum WorkerTokenConfig {
+    /// A single token used for all workers (backward compatible v1).
+    Shared(String),
+    /// A specific token per worker URL.
+    PerWorker(HashMap<String, String>),
+}
+
+impl WorkerTokenConfig {
+    pub fn get_token(&self, worker_url: &str) -> Option<&str> {
+        match self {
+            Self::Shared(token) => Some(token.as_str()),
+            Self::PerWorker(map) => map.get(worker_url).map(|s| s.as_str()),
+        }
+    }
+}
 
 /// Cap on concurrent in-flight `/scan` requests across all workers, so a
 /// large target list doesn't open hundreds of sockets at once. Mirrors the
@@ -47,7 +66,7 @@ pub async fn run_distributed_scan(
     client: &Client,
     targets: Vec<ScanTarget>,
     worker_base_urls: &[String],
-    token: &str,
+    tokens: &WorkerTokenConfig,
 ) -> Vec<ScanFinding> {
     if targets.is_empty() || worker_base_urls.is_empty() {
         return Vec::new();
@@ -59,8 +78,19 @@ pub async fn run_distributed_scan(
 
     for (i, target) in targets.into_iter().enumerate() {
         let worker_url = worker_base_urls[i % worker_base_urls.len()].clone();
+        
+        let token = match tokens.get_token(&worker_url) {
+            Some(t) => t.to_string(),
+            None => {
+                logger::warn(&format!(
+                    "distributed scan: no token configured for worker {}",
+                    worker_url
+                ));
+                continue;
+            }
+        };
+
         let client = client.clone();
-        let token = token.to_string();
         let checks = checks.clone();
         let semaphore = semaphore.clone();
 
@@ -158,7 +188,7 @@ mod tests {
             &client,
             vec![],
             &["http://127.0.0.1:1".to_string()],
-            "token",
+            &WorkerTokenConfig::Shared("token".to_string()),
         )
             .await;
         assert!(findings.is_empty());
@@ -168,7 +198,7 @@ mod tests {
     async fn empty_worker_list_returns_empty_without_any_network_call() {
         let client = Client::new();
         let findings =
-            run_distributed_scan(&client, vec![target("http://example.com")], &[], "token").await;
+            run_distributed_scan(&client, vec![target("http://example.com")], &[], &WorkerTokenConfig::Shared("token".to_string())).await;
         assert!(findings.is_empty());
     }
 
@@ -183,7 +213,7 @@ mod tests {
             &client,
             vec![target("http://example.com/x"), target("http://example.com/y")],
             &["http://127.0.0.1:1".to_string()],
-            "token",
+            &WorkerTokenConfig::Shared("token".to_string()),
         )
             .await;
         assert!(findings.is_empty());
@@ -202,7 +232,22 @@ mod tests {
         let client = Client::new();
         let targets: Vec<ScanTarget> = (0..5).map(|i| target(&format!("http://example.com/{i}"))).collect();
         let workers = vec!["http://127.0.0.1:1".to_string(), "http://127.0.0.1:2".to_string()];
-        let findings = run_distributed_scan(&client, targets, &workers, "token").await;
+        let findings = run_distributed_scan(&client, targets, &workers, &WorkerTokenConfig::Shared("token".to_string())).await;
+        assert!(findings.is_empty());
+    }
+
+    #[tokio::test]
+    async fn targets_fail_fast_without_token() {
+        let client = Client::new();
+        let mut tokens_map = HashMap::new();
+        tokens_map.insert("http://127.0.0.1:1".to_string(), "token".to_string());
+        
+        let config = WorkerTokenConfig::PerWorker(tokens_map);
+        let targets = vec![target("http://example.com/1"), target("http://example.com/2")];
+        // Only worker 1 has a token, worker 2 will be skipped
+        let workers = vec!["http://127.0.0.1:1".to_string(), "http://127.0.0.1:2".to_string()];
+        
+        let findings = run_distributed_scan(&client, targets, &workers, &config).await;
         assert!(findings.is_empty());
     }
 }

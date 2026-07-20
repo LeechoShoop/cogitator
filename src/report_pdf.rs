@@ -46,6 +46,7 @@ use std::io::{BufWriter, Cursor};
 use printpdf::{BuiltinFont, IndirectFontRef, Mm, PdfDocument, PdfDocumentReference, PdfLayerReference};
 
 use crate::report::{self, ReportMeta};
+use crate::report::format::format_timestamp;
 use crate::scanner::ScanFinding;
 
 // ─── Page geometry ──────────────────────────────────────────────────────────
@@ -331,7 +332,7 @@ fn render_cover_page(
 
     cur.line(&format!("Target: {}", meta.domain), &fonts.regular, SIZE_BODY, 0.0);
     cur.line(
-        &format!("Generated: {} UTC", format_timestamp_for_pdf(meta.timestamp_ms)),
+        &format!("Generated: {} UTC", format_timestamp(meta.timestamp_ms)),
         &fonts.regular,
         SIZE_BODY,
         0.0,
@@ -397,37 +398,7 @@ impl Cursor2 {
     }
 }
 
-/// Same civil-calendar math as `report::format_timestamp_utc`, duplicated
-/// here rather than made `pub(crate)` and shared — it's ten lines of pure
-/// arithmetic with zero PDF-specific behaviour, and keeping this module
-/// import-independent of `report`'s internals (as opposed to its public
-/// `ReportMeta`/`SEVERITY_ORDER`/`severity_label`) means either file's
-/// private helpers can be refactored without touching the other.
-fn format_timestamp_for_pdf(timestamp_ms: u64) -> String {
-    let total_secs = (timestamp_ms / 1000) as i64;
-    let days = total_secs.div_euclid(86_400);
-    let secs_of_day = total_secs.rem_euclid(86_400);
 
-    let z = days + 719_468;
-    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
-    let doe = (z - era * 146_097) as u64;
-    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
-    let y = yoe as i64 + era * 400;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let day = (doy - (153 * mp + 2) / 5 + 1) as u32;
-    let month = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
-    let year = if month <= 2 { y + 1 } else { y };
-
-    let hour = secs_of_day / 3600;
-    let min = (secs_of_day % 3600) / 60;
-    let sec = secs_of_day % 60;
-
-    format!(
-        "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
-        year, month, day, hour, min, sec
-    )
-}
 
 #[cfg(test)]
 mod tests {

@@ -9,7 +9,7 @@
 
 [package]
 name = "example-plugin"
-version = "0.8.0"
+version = "0.9.0"
 edition = "2024"
 # ^ Must match cogitator-plugin-api's own edition. Not because Cargo
 #   requires it (crates with different editions link together fine), but

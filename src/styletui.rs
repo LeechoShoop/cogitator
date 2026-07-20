@@ -95,7 +95,7 @@ pub fn draw_ui(
     let header_art = format!(
         "    _     _                                       _     _    \n\
          _ /_|   |_\\ _                                 _ /_|   |_\\ _ \n\
-         \\/  |___|  \\/        COGITATOR OS v0.7        \\/  |___|  \\/ \n\
+         \\/  |___|  \\/        COGITATOR OS v0.9        \\/  |___|  \\/ \n\
          =======|=======  PROXY: {}  =======|=======\n\
                 |          THE OMNISSIAH PROTECTS            |       ",
         status_text

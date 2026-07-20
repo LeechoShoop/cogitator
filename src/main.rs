@@ -260,8 +260,8 @@ fn main() -> Result<(), io::Error> {
         // Periodic system health check.
         if last_health_check.elapsed() >= health_check_interval {
             if let Some(warning) = check_system_health(&sys) {
-                output_buffer = warning.clone();
                 logger::log_event(&warning);
+                output_buffer = warning; // move after the borrow — no clone needed
             }
             last_health_check = Instant::now();
         }

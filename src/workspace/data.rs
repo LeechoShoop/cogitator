@@ -228,6 +228,11 @@ impl WorkspaceData {
                     .as_millis() as u64;
                 let timestamp_ms = now_ms.saturating_sub(age.as_millis() as u64);
 
+                // `all_records` is a `Vec<RequestRecord>` returned by
+                // `History::list`, but the slice ref prevents moving fields
+                // out — each String/Vec clone here is unavoidable without an
+                // additional into_iter() refactor that would not reduce
+                // allocations (the records are already owned copies).
                 RequestRecordSer {
                     id: r.id,
                     timestamp_ms,
@@ -246,6 +251,9 @@ impl WorkspaceData {
             .collect();
 
         // ── Scanner findings ──────────────────────────────────────────────────
+        // `scan_findings` is `&[ScanFinding]`; moving fields out of a shared
+        // slice reference is not possible, so each String/Option<String> must
+        // be cloned. The severity is formatted rather than cloned (different type).
         let scan_findings_ser: Vec<ScanFindingSer> = scan_findings
             .iter()
             .map(|f| ScanFindingSer {
@@ -284,6 +292,9 @@ impl WorkspaceData {
         if is_new_run && !scan_findings_ser.is_empty() {
             scan_snapshots.push(ScanSnapshot {
                 timestamp_ms: now_ms,
+                // Clone here because `scan_findings_ser` is also moved into
+                // `WorkspaceData::scan_findings` at the end of this function
+                // (back-compat mirror). Cannot move twice.
                 findings: scan_findings_ser.clone(),
             });
             if scan_snapshots.len() > MAX_SCAN_SNAPSHOTS {
@@ -403,6 +414,10 @@ impl WorkspaceData {
         // ── History ────────────────────────────────────────────────────────────
         // Records are pushed in order; the ring buffer will evict the oldest
         // ones if the total exceeds MAX_RECORDS.
+        // Iterating `&self.history` gives `&RequestRecordSer`; moving fields
+        // out of a reference is not allowed, so String/Vec fields must be
+        // cloned. The timestamp is reconstructed as `Instant::now()` (see
+        // comment above) and `stream_id` defaults to None (no workspace field).
         for r in &self.history {
             let body = base64_decode(&r.body_b64);
             let response_body = r.response_body_b64.as_deref().map(base64_decode);
@@ -434,14 +449,10 @@ impl WorkspaceData {
             repeater.close_tab(tab.id);
         }
         for tab in &self.repeater_tabs {
-            repeater.restore_tab(RepeaterTabSer {
-                id: tab.id,
-                name: tab.name.clone(),
-                scheme: tab.scheme.clone(),
-                request_raw: tab.request_raw.clone(),
-                response_raw: tab.response_raw.clone(),
-                history: tab.history.clone(),
-            });
+            // `RepeaterTabSer` derives `Clone`; a single clone is equivalent to
+            // cloning all 5 String/Vec fields individually but is less fragile
+            // if new fields are added to the struct later.
+            repeater.restore_tab(tab.clone());
         }
 
         // ── Sessions ───────────────────────────────────────────────────────────

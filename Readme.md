@@ -1,156 +1,83 @@
-# ⚙️ COGITATOR
+<div align="center">
+  
+# ⚙️ COGITATOR OS v0.9
 
-> *"Knowledge is power, and power must be sanctified."*
-> — Principia Technologica, Om 4:12
+**Knowledge is power, and power must be sanctified.**<br>
+*— Principia Technologica, Om 4:12*
 
-**Cogitator** is a terminal-based TLS MITM intercepting proxy and penetration testing toolkit written in Rust — conceptually similar to Burp Suite, but with no GUI for the weak, and no mercy for negligent web applications. Cogitator's Machine Spirit reads through encrypted traffic as effortlessly as the Adeptus Mechanicus reads sacred schematics.
+[![Rust](https://img.shields.io/badge/Rust-1.80%2B-orange.svg?style=flat-square&logo=rust)](https://www.rust-lang.org/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Win-lightgrey.svg?style=flat-square)](#)
 
-This tool was forged to learn network security engineering and low-level Rust through practice — every line of code has been hammered out, sanctified, and battle-tested.
+**Cogitator** is a terminal-based (TUI) web security toolkit, TLS MITM intercepting proxy, and automated vulnerability scanner written entirely in Rust. Designed conceptually like Burp Suite but engineered for terminal purists, it offers deep insight into HTTP/HTTPS and WebSocket traffic without leaving the command line.
 
----
-
-## 🔱 Table of Contents
-
-- [What Cogitator Can Do](#-what-cogitator-can-do)
-- [Architecture](#-architecture)
-- [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [Installing the Root Certificate (Export-CA)](#-installing-the-root-certificate-export-ca)
-- [Sacred Commandments (Full Command List)](#-sacred-commandments-full-command-list)
-- [Terminal Interface](#-terminal-interface)
-- [Plugins](#-plugins-extending-the-machine-spirit)
-- [Workspace: Saving State](#-workspace-saving-state)
-- [Disclaimer](#-disclaimer-litany-of-caution)
-- [Roadmap](#-roadmap)
-- [Contributing](#-contributing)
+</div>
 
 ---
 
-## ⚔️ What Cogitator Can Do
+## 🔱 Core Capabilities
 
-Cogitator isn't a single tool — it's a tribunal of inquisitorial modules united under one Machine Spirit:
+Cogitator integrates a multitude of offensive and analytical modules into a single `tokio`-driven binary. All modules operate under a unified TUI built with `ratatui`.
 
-| Module | Purpose |
-|---|---|
-| **TLS MITM Proxy** | Intercepts HTTP/HTTPS traffic (including HTTP/2 via ALPN) with on-the-fly certificate substitution through a local CA |
-| **WebSocket Interceptor** | Full RFC 6455 codec, real-time frame interception and modification |
-| **Interceptor (Frozen Mode)** | Pauses live requests with Forward / Drop / Modify decisions, including header and body editing |
-| **Repeater** | Multi-tab manual request replay and modification |
-| **Active Scanner** | Automated SQLi, XSS (reflected/stored), and Path Traversal detection with configurable concurrency |
-| **Scan Diff** | Compares scan results across runs — tracks regressions and newly introduced vulnerabilities |
-| **Intruder** | Sniper / Battering Ram / Pitchfork / Cluster Bomb wordlist-based attacks |
-| **Spider** | BFS crawler respecting robots.txt, with link/form extraction |
-| **CVE Lookup** | Looks up known vulnerabilities from service banners via `cve.circl.lu` |
-| **Crypto Forensics** | TLS/cookie security audit, HSTS, HPKP, JWT detection, A–F grading |
-| **Web/Email Analyzer** | Full site audit + SPF/DKIM/DMARC verification |
-| **Process & Network Rites** | Process monitoring, active socket listing, CPU-based suspicious activity detection |
-| **Scope System** | Flexible include/exclude regex filtering — keep the crosshairs on the target only |
-| **History** | 10,000-record ring buffer of every exchange that passed through |
-| **Plugin System** | Loads external `.so` plugins via `cogitator-plugin-api` |
-| **Workspace Save/Load** | Full session state preservation into a `.cogitator` file |
-
----
-
-## 🏛️ Architecture
-
-```
-cogitator/
-├── main.rs              — entry point, TUI event loop, command dispatcher
-├── proxy_guard.rs        — proxy server core, pipeline entry point
-├── tls_mitm.rs            — cert generation/cache, CONNECT handling, ALPN/h2
-├── interceptor.rs         — Frozen mode, operator decision queue
-├── ws_interceptor.rs      — WebSocket codec and frame interception
-├── history.rs             — request/response ring buffer
-├── repeater.rs             — Repeater tabs, manual replay
-├── scanner.rs              — ScanCheck trait, scan queue
-│   └── checks/
-│       ├── sqli.rs           — SQL injection (error-based)
-│       ├── xss.rs             — Reflected/Stored XSS
-│       └── traversal.rs       — Path Traversal
-├── intruder.rs              — wordlist-based attacks
-├── spider.rs                 — BFS crawler
-├── scope.rs                   — regex include/exclude rules
-├── session.rs                  — cookie jar save/restore
-├── workspace.rs                 — session state serialization
-├── plugin.rs                     — external .so plugin loading
-├── crypto_forensic.rs             — TLS/cookie/HSTS audit
-├── web_analyzer.rs                  — full site audit
-├── scrap_analyze.rs                  — page metadata extraction
-├── dns_guard.rs                       — SPF/DKIM/DMARC, DNS queries
-├── network_guard.rs                    — active sockets + resolution
-├── cve.rs                                — CVE lookup (cve.circl.lu)
-├── styletui.rs                            — interface rendering (ratatui)
-├── logger.rs                               — structured JSON logging
-├── notifier.rs                              — system notifications
-└── config.rs                                 — all magic numbers
-```
-
-The Machine Spirit runs on `tokio` — the async proxy core coexists with the synchronous TUI loop via `block_in_place`/`spawn_blocking`, never breaking the rhythm of the render liturgy.
+| 🛡️ Module | 🎯 Purpose |
+| :--- | :--- |
+| **TLS MITM Proxy** | Intercepts HTTP/1.1 and HTTP/2 (ALPN) traffic. Signs certificates on-the-fly using a generated local CA. |
+| **WebSocket Interceptor** | Captures, decodes (RFC 6455), and allows real-time manipulation of WebSocket frames. |
+| **Interceptor (Frozen Mode)** | Pauses live proxy traffic. Operators can *Forward*, *Drop*, or *Modify* headers/bodies before they hit the wire. |
+| **Repeater** | A multi-tab environment for taking historical requests, modifying them manually, and replaying them. |
+| **Active Scanner** | Discovers vulnerabilities automatically (SQLi, XSS, Path Traversal) with a concurrent, rate-limited execution engine. |
+| **Scan Diff** | Compares active scan results across multiple runs to track regressions or newly patched vulnerabilities. |
+| **Intruder** | Payload fuzzer supporting Sniper, Battering Ram, Pitchfork, and Cluster Bomb attack types via custom wordlists. |
+| **Spider** | BFS crawler that extracts links and forms, respects `robots.txt`, and features an optional **headless browser (JS)** engine (via `chromiumoxide`) for crawling SPAs. |
+| **Web/Email Analyzer** | Comprehensive OSINT and passive auditing, including SPF/DKIM/DMARC checks. |
+| **Crypto & Forensics** | Passive audits of TLS configurations, HSTS, HPKP, and JWT tokens, assigning A–F security grades. |
+| **CVE Lookup** | Correlates detected service banners against `cve.circl.lu` for known CVEs. |
+| **Scope Engine** | Regex-based Include/Exclude routing to ensure scans and interceptions only target authorized domains. |
+| **History & Sessions** | A 10,000-record ring buffer for traffic, plus named Session Profiles to save and restore `CookieJars`. |
+| **Plugin API** | Extensible architecture allowing external `.so` / `.dll` Rust modules to inject custom scan hooks. |
+| **Workspace Vault** | Serializes the entire campaign (history, scope, sessions, findings) to an encrypted/compressed `.cogitator` state file. |
 
 ---
 
-## 🛠️ Installation
+## ⚡ Installation & Quick Start
 
-### Requirements
+### 📋 Requirements
+- **Rust 1.80+** (2024 edition)
+- **Chrome / Chromium** installed locally *(only required if using the Spider's `--js` headless crawling)*
 
-- Rust **1.80+** (2024 edition)
-- Linux / macOS / Windows
-- Permission to install a root certificate into the system trust store (required for HTTPS interception)
-
-### Build from Source
-
+### 🛠️ Build
 ```bash
 git clone https://github.com/<your-username>/cogitator.git
 cd cogitator
 cargo build --release
 ```
 
-The binary will be produced at `target/release/cogitator`.
-
+### 🚀 Launch
+Run the binary to enter the TUI. By default, the proxy listens on `127.0.0.1:8080`. Point your browser or `curl` to this proxy.
 ```bash
-./target/release/cogitator
+./target/release/Cogitator
 ```
 
----
-
-## ⚡ Quick Start
-
-1. **Launch Cogitator:**
-   ```bash
-   cogitator
-   ```
-2. **Start the proxy** (toggle on the main screen — listens by default on `127.0.0.1:8080`).
-3. **Point your browser/curl** at the proxy: `127.0.0.1:8080`.
-4. **Install the Cogitator CA certificate** (see below) — otherwise TLS will complain on every single site.
-5. Review traffic in the `History` panel, freeze requests in `Interceptor`, send them to `Repeater`, and run `Scan-Site`.
-
-```bash
-curl -x http://127.0.0.1:8080 --cacert cogitator_ca.pem https://example.com
-```
-
----
-
-## 🕯️ Installing the Root Certificate (Export-CA)
-
-Cogitator generates its own local CA (`cogitator_ca.pem` / `cogitator_ca.key`) on first run and signs leaf certificates on the fly for every domain traffic passes through.
-
-Type into the TUI:
-
+### 🔑 CA Certificate Installation
+To intercept HTTPS traffic without browser errors, you must install the Cogitator Root CA. In the TUI command line, type:
 ```
 Export-CA
 ```
-
-This copies `cogitator_ca.pem` into the working directory and prints installation instructions for your OS/browser trust store.
-
-> ⚠️ **Litany of Caution:** only trust this CA on machines you personally control. Installing a third-party root certificate opens the door to interception of *any* HTTPS traffic on that machine.
+This drops a `cogitator_ca.pem` file in your directory with instructions on how to install it in your OS/browser trust store.<br>
+> ⚠️ **Warning:** Only trust this CA on environments you completely own and control.
 
 ---
 
-## 📜 Sacred Commandments (Full Command List)
+## 📜 Sacred Commandments (TUI Commands)
 
-```
+The TUI accepts commands at the bottom prompt. Use `Tab` to cycle between screens (Main, Interceptor, Repeater, Scanner, Intruder, Spider).
+
+<details open>
+<summary><b>Click to view all commands</b></summary>
+
+```text
 ╔═══════════════════════════════════════════════════════╗
-║       COGITATOR — SACRED COMMANDMENTS v0.6            ║
+║       COGITATOR — SACRED COMMANDMENTS v0.9            ║
 ╠═══════════════════════════════════════════════════════╣
 ║  WEB FORENSICS                                         ║
 ║    Analyze-Site <dom>       Full audit (human)         ║
@@ -184,136 +111,109 @@ This copies `cogitator_ca.pem` into the working directory and prints installatio
 ║    Intruder-Load <file>  Load raw HTTP template (file) ║
 ╠═══════════════════════════════════════════════════════╣
 ║  SPIDER                                                ║
-║    Spider <domain>        Crawl (depth 3, 500 pages)   ║
-║    Spider-Depth <dom> <N> Crawl with explicit depth    ║
-╠═══════════════════════════════════════════════════════╣
-║  PROCESS RITES                                         ║
-║    GP                   List all processes             ║
-║    Find-Suspicious      Detect high CPU usage          ║
-║    Exterminate <PID>    Purge a process                ║
-║    GPP <PID>            Reveal process path            ║
-╠═══════════════════════════════════════════════════════╣
-║  NETWORK LITANIES                                      ║
-║    Get-NIF              List network interfaces        ║
-║    GC                   List active sockets + DNS      ║
+║    Spider <domain> [--js] Crawl (depth 3, 500 pages)   ║
+║    Spider-Depth <dom> <N> [--js] Explicit depth        ║
 ╠═══════════════════════════════════════════════════════╣
 ║  WORKSPACE                                             ║
 ║    Workspace-Save [file]  Save state (.cogitator)      ║
 ║    Workspace-Load <file>  Restore state from file      ║
 ║    Workspace-New          Reset all in-memory state    ║
 ╠═══════════════════════════════════════════════════════╣
-║  SYSTEM                                                ║
+║  SYSTEM / PIPELINE                                     ║
+║    GP                   List all processes             ║
+║    Find-Suspicious      Detect high CPU usage          ║
+║    Exterminate <PID>    Purge a process                ║
+║    GPP <PID>            Reveal process path            ║
+║    Get-NIF              List network interfaces        ║
+║    GC                   List active sockets + DNS      ║
 ║    CG                   Clear log records              ║
 ║    help                 Display this holy mandate      ║
 ║    exit                 Appease the Machine Spirit      ║
 ╚═══════════════════════════════════════════════════════╝
 ```
+</details>
 
-> The full text of these commandments is always available in-app via `help`.
-
-### Example Engagement
-
-```
-> Spider example.com
-> Scan-Site example.com
-> Scan-Diff
-> Fuzz https://example.com/login?user=§PAYLOAD§ wordlists/usernames.txt
+### 🎯 Example Usage Flow
+```text
+> Scope-Add ^https://target\.com
+> Spider target.com --js
+> Scan-Site target.com
 > Send-To-Repeater 42
-> Export-CA
-> Workspace-Save campaign-alpha.cogitator
+> Workspace-Save target_campaign.cogitator
 ```
 
 ---
 
-## 🖥️ Terminal Interface
+## 🏛️ Architecture & Crates
 
-The TUI is built on `ratatui` and switches between six screens:
+Cogitator is designed as a Cargo workspace with a clear separation of concerns between its API, background workers, and the monolithic core engine.
 
-| Screen | Purpose |
-|---|---|
-| **Main** | Command line, event log, overview |
-| **Interceptor** | History of exchanges / Frozen mode (pause and edit live requests and WS frames) |
-| **Repeater** | Multi-tab manual HTTP request replay |
-| **Scanner** | Active three-panel vulnerability scanner |
-| **Intruder** | Wordlist attacks with Sniper/BatteringRam/Pitchfork/ClusterBomb modes |
-| **Spider** | Live crawl overview with anomaly highlighting |
+### 📦 Workspace Crates
+- **`cogitator-plugin-api`**: The stable FFI interface defining the `CogitatorPlugin` trait. Acts as the unyielding contract that external `.so`/`.dll` plugins must implement to hook into the proxy lifecycle.
+- **`example-plugin`**: A reference implementation demonstrating how to build a dynamic library that integrates with Cogitator.
+- **`cogitator-worker`**: Contains background data structures and detached worker threads that offload heavy computations from the main asynchronous runtime.
 
-Inside `Interceptor`'s Frozen mode, every captured request is a prisoner awaiting the operator's verdict: **Forward** (release), **Drop** (execute), or **Modify** (rewrite the sacred text of headers and body before sending).
+### 🧠 Core Engine (`src/`)
 
----
+<details>
+<summary><b>1. Core Event Loop & Networking</b></summary>
+<br>
 
-## 🔌 Plugins (Extending the Machine Spirit)
+- **`main.rs`**: The heart of the Machine Spirit. Initializes the `tokio` runtime, the `ratatui` event loop, and coordinates shared state.
+- **`proxy_guard.rs`**: The main TCP listener for the HTTP/HTTPS proxy. Handles routing and connection flows.
+- **`tls_mitm.rs`**: The Man-In-The-Middle engine. Automatically generates a local Root CA (`cogitator_ca.pem`), intercepts `CONNECT` requests, negotiates ALPN, and signs spoofed certificates on-the-fly.
+- **`ws_interceptor.rs`**: Implements the RFC 6455 WebSocket protocol to intercept, parse, and allow modification of live WS frames.
+</details>
 
-Cogitator supports external plugins through a separate `cogitator-plugin-api` crate:
+<details>
+<summary><b>2. User Interface & State</b></summary>
+<br>
 
-- A shared trait defining the plugin contract, with versioned ABI
-- An `export_plugin!` macro for registration
-- Built-in plugins auto-register via `inventory`
-- External `.so` plugins are loaded dynamically via `libloading`
+- **`styletui/`**: Manages the multi-screen terminal interface (Main, Interceptor, Repeater, Scanner, Intruder, Spider).
+- **`commands/`**: A table-driven router parsing user input from the TUI prompt and dispatching it to specific subsystem handlers.
+- **`logger.rs`**: A structured JSON and plaintext logging engine.
+</details>
 
-This means you can chain your own analysis module onto Cogitator without touching the core — the Machine Spirit accepts a new rite as if it were born with it.
+<details>
+<summary><b>3. Traffic Analysis & Manipulation</b></summary>
+<br>
 
----
+- **`history.rs`**: A 10,000-record ring buffer saving every request/response that passes through the proxy.
+- **`interceptor.rs`**: Pauses live proxy traffic (Frozen Mode) for the operator to forward, drop, or rewrite.
+- **`repeater.rs`**: Allows the operator to take a historical request and manually tweak it before resending.
+- **`session.rs`**: Manages the `CookieJar` and session profiles.
+- **`scope.rs`**: A Regex-based filtering engine that dictates what traffic the proxy should log or ignore.
+</details>
 
-## 💾 Workspace: Saving State
+<details>
+<summary><b>4. Automated Offensive Modules</b></summary>
+<br>
 
-A long campaign against a target shouldn't end when you close the terminal.
+- **`scanner.rs` & `checks/`**: Active vulnerability scanning engine (SQLi, XSS, Path Traversal).
+- **`intruder.rs`**: Fuzzer and bruteforcer supporting Sniper, Battering Ram, Pitchfork, and Cluster Bomb attack models.
+- **`spider/`**: A multi-threaded Breadth-First Search (BFS) crawler with `robots.txt` support and an optional **headless browser engine (`chromiumoxide`)**.
+</details>
 
-```
-Workspace-Save campaign.cogitator
-Workspace-Load campaign.cogitator
-Workspace-New
-```
+<details>
+<summary><b>5. Passive Recon & Forensics</b></summary>
+<br>
 
-A snapshot includes: history, scope rules, sessions, scan snapshots (for `Scan-Diff`), and other accumulated knowledge of the target.
+- **`web_analyzer/` & `scrap_analyze.rs`**: Pulls HTML metadata, audits security headers, and detects potential secrets in source code.
+- **`crypto_forensic.rs`**: Audits TLS connection parameters, HSTS/HPKP headers, and JWT tokens (A–F grades).
+- **`dns_guard.rs` & `network_guard.rs`**: OSINT (SPF, DKIM, DMARC), active network sockets, and suspicious CPU activity monitoring.
+- **`cve.rs`**: Connects to `cve.circl.lu` to find known vulnerabilities for service banners.
+</details>
 
-You can also open a campaign archive directly at launch:
+<details>
+<summary><b>6. Persistence</b></summary>
+<br>
 
-```bash
-cogitator campaign.cogitator
-```
-
----
-
-## ⚠️ Disclaimer (Litany of Caution)
-
-> *"Do not point this instrument at a target for which thou hast no sanction from thy master."*
-
-Cogitator is built **exclusively** for:
-
-- authorized penetration testing,
-- security research and education,
-- auditing your own infrastructure.
-
-Unauthorized interception of someone else's traffic, scanning systems you don't own, or running MITM attacks against third parties is **illegal** in most jurisdictions. The author bears no responsibility for misuse of this tool. Heresy is punished by law, not only by the Inquisition.
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Expand the active check library (SSRF, XXE, command injection)
-- [ ] Improved Scan-Diff visualization
-- [ ] Distributed scanning across multiple nodes
-- [ ] HTML/PDF report export
-- [ ] *(AI-assisted analysis — deferred until core functionality is complete)*
+- **`workspace/` & `vault.rs`**: Serializes the campaign state (history, scope, sessions, findings) and encrypts/compresses it into a portable `.cogitator` archive.
+</details>
 
 ---
 
-## 🤝 Contributing
-
-PRs and issues are welcome. Before submitting code:
-
-```bash
-cargo fmt
-cargo clippy --all-targets -- -D warnings
-cargo test
-```
-
-Every new module is a new chapter in the Book of Knowledge. The codex honors cleanliness, explicit errors over silent panics, and magic numbers living only in `config.rs`.
-
----
-
-<p align="center">
-<i>Machine Spirit awakened. Proxy litanies recited. The Omnissiah is pleased.</i><br>
-⚙️ <b>COGITATOR</b> — knowledge through interception ⚙️
-</p>
+<div align="center">
+  <i>"Do not point this instrument at a target for which thou hast no sanction from thy master."</i><br><br>
+  <b>Built for authorized penetration testing and security research only.</b>
+</div>

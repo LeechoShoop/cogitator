@@ -48,11 +48,13 @@ Start as many as you like, on as many hosts as you like, each with the
 
 ## 4. Run a distributed scan from the TUI
 
-In the same shell the TUI runs in:
+In the simplest setup (shared token), export it in the same shell the TUI runs in:
 
 ```bash
 export COGITATOR_WORKER_TOKEN=changeme
 ```
+
+*Note: The underlying `distributed.rs` client now also supports per-worker tokens via `WorkerTokenConfig::PerWorker(HashMap<String, String>)`. When wired into `main.rs`, this will allow different trust zones/tokens for different worker URLs rather than relying on a single shared secret.*
 
 then, inside Cogitator:
 

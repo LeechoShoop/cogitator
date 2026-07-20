@@ -89,7 +89,8 @@ async fn handle_proxy_request(
     let in_scope = scope.lock().unwrap().in_scope(&scope_url);
 
     if !in_scope {
-        let origin_target = tunnel_host.unwrap_or_else(|| host.clone());
+        // `host` is not used after this early return, so move it instead of cloning.
+        let origin_target = tunnel_host.unwrap_or(host);
         return match tls_mitm::forward_to_origin(&origin_target, req).await {
             Ok(fwd) => Ok(fwd.response),
             Err(e) => {
@@ -118,6 +119,10 @@ async fn handle_proxy_request(
     // needs its own TLS handshake too in that case.
     if ws_interceptor::is_websocket_upgrade(req.headers()) {
         let use_tls = tunnel_host.is_some();
+        // `intercept_websocket` needs both the stripped `host` (for logging/history)
+        // and the full `origin_target` (with port, for the outbound connection).
+        // When tunnel_host is Some they differ, so we must clone host here rather
+        // than moving it into origin_target and losing it for the host argument.
         let origin_target = tunnel_host.unwrap_or_else(|| host.clone());
         return ws_interceptor::intercept_websocket(
             req,
@@ -166,6 +171,8 @@ async fn handle_proxy_request(
     // For plain (non-tunneled) proxying there is no CONNECT target, so fall
     // back to the bare host; `forward_to_origin` defaults that to port 80,
     // which matches an ordinary unencrypted HTTP proxy request.
+    // `host` must survive to be passed into `record_exchange` below (L184),
+    // so we cannot move it into `origin_target` when `tunnel_host` is None.
     let origin_target = tunnel_host.unwrap_or_else(|| host.clone());
 
     let started_at = Instant::now();
@@ -335,15 +342,15 @@ async fn handle_connect(
 ) -> Result<Response<Full<Bytes>>, Infallible> {
     // CONNECT's request-target is authority-form: "host:port" (no scheme,
     // no path). `req.uri().authority()` is the correct accessor for that.
-    let target = req
+    // Use `tunnel_host` directly for both the log below and the spawned task.
+    // Separating `target` and `tunnel_host` with a clone served no purpose.
+    let tunnel_host = req
         .uri()
         .authority()
         .map(|a| a.to_string())
         .unwrap_or_else(|| req.uri().to_string());
 
-    logger::log_event(&format!("Proxy Guard CONNECT received for {}", target));
-
-    let tunnel_host = target.clone();
+    logger::log_event(&format!("Proxy Guard CONNECT received for {}", tunnel_host));
 
     tokio::spawn(async move {
         let upgraded = match hyper::upgrade::on(req).await {

@@ -18,12 +18,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::scanner::{ScanFinding, ScanTarget};
 
-/// Env var holding the shared bearer token every `/scan` and `/health`
+/// Env var holding the bearer token every `/scan` and `/health`
 /// request must present, and that every `cogitator-worker` process checks
-/// incoming requests against. v1's entire auth story: one shared secret,
-/// no per-worker tokens, no TLS. Both sides read the *same* constant name
-/// so there's no risk of the coordinator and a worker silently agreeing on
-/// two different env var names.
+/// incoming requests against. While each worker reads this single env var
+/// for its own configuration, the coordinator can be configured to use
+/// per-worker tokens or a single shared secret. Both sides read the *same*
+/// constant name to avoid silently agreeing on two different env var names.
 pub const WORKER_TOKEN_ENV_VAR: &str = "COGITATOR_WORKER_TOKEN";
 
 /// Every check name a worker can be asked to run, matched against

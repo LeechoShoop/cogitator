@@ -23,6 +23,7 @@ pub(crate) fn build_spider_config(
     max_depth: u8,
     max_pages: usize,
     history: Arc<crate::history::History>,
+    use_js: bool,
 ) -> (String, spider_crawler::SpiderConfig) {
     let trimmed = domain_or_url.trim_end_matches('/');
     let seed_url = if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
@@ -58,6 +59,7 @@ pub(crate) fn build_spider_config(
             .to_string(),
         cached_robots_disallow: None,
         history,
+        use_js,
     };
 
     (seed_url, config)
@@ -66,16 +68,23 @@ pub(crate) fn build_spider_config(
 // ── Spider-Depth ──────────────────────────────────────────────────────────────
 
 pub fn spider_depth(ctx: &mut CommandContext<'_>, rest: &str) {
-    let parts: Vec<&str> = rest.split_whitespace().collect();
+    let mut parts: Vec<&str> = rest.split_whitespace().collect();
+    let use_js = if let Some(idx) = parts.iter().position(|&p| p == "--js") {
+        parts.remove(idx);
+        true
+    } else {
+        false
+    };
+
     if parts.len() != 2 {
-        *ctx.output_buffer = "Usage: Spider-Depth <domain> <N>".to_string();
+        *ctx.output_buffer = "Usage: Spider-Depth <domain> <N> [--js]".to_string();
         return;
     }
 
     match parts[1].parse::<u8>() {
         Ok(depth) => {
             let (seed_url, cfg) =
-                build_spider_config(parts[0], depth, 500, ctx.history.clone());
+                build_spider_config(parts[0], depth, 500, ctx.history.clone(), use_js);
 
             // `spider::run` spawns its own task; `enter()` provides the
             // runtime context without blocking the TUI loop.
@@ -89,13 +98,13 @@ pub fn spider_depth(ctx: &mut CommandContext<'_>, rest: &str) {
             );
             *ctx.spider_rx = Some(rx);
             *ctx.output_buffer = format!(
-                "⏳ Crawling {} (depth {}, max 500 pages)…",
-                seed_url, depth
+                "⏳ Crawling {} (depth {}, max 500 pages, js: {})…",
+                seed_url, depth, use_js
             );
             *ctx.current_screen = Screen::Spider;
         }
         Err(_) => {
-            *ctx.output_buffer = "Usage: Spider-Depth <domain> <N>".to_string();
+            *ctx.output_buffer = "Usage: Spider-Depth <domain> <N> [--js]".to_string();
         }
     }
 }
@@ -103,13 +112,21 @@ pub fn spider_depth(ctx: &mut CommandContext<'_>, rest: &str) {
 // ── Spider ────────────────────────────────────────────────────────────────────
 
 pub fn spider(ctx: &mut CommandContext<'_>, rest: &str) {
-    if rest.is_empty() {
+    let mut parts: Vec<&str> = rest.split_whitespace().collect();
+    let use_js = if let Some(idx) = parts.iter().position(|&p| p == "--js") {
+        parts.remove(idx);
+        true
+    } else {
+        false
+    };
+
+    if parts.is_empty() {
         *ctx.output_buffer =
-            "Usage: Spider <domain>  (or Spider-Depth <domain> <N>)".to_string();
+            "Usage: Spider <domain> [--js]  (or Spider-Depth <domain> <N> [--js])".to_string();
         return;
     }
 
-    let (seed_url, cfg) = build_spider_config(rest, 3, 500, ctx.history.clone());
+    let (seed_url, cfg) = build_spider_config(parts[0], 3, 500, ctx.history.clone(), use_js);
 
     let _guard = ctx.rt.enter();
     let rx = spider_crawler::run(cfg, ctx.follow.clone());
@@ -121,8 +138,8 @@ pub fn spider(ctx: &mut CommandContext<'_>, rest: &str) {
     );
     *ctx.spider_rx = Some(rx);
     *ctx.output_buffer = format!(
-        "⏳ Crawling {} (depth 3, max 500 pages)…",
-        seed_url
+        "⏳ Crawling {} (depth 3, max 500 pages, js: {})…",
+        seed_url, use_js
     );
     *ctx.current_screen = Screen::Spider;
 }

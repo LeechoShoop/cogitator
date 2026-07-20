@@ -1,7 +1,14 @@
 [package]
 name = "Cogitator"
-version = "0.1.0"
+version = "0.9.0"
 edition = "2024"
+
+[features]
+# Gate the headless-browser integration smoke test.
+# The `use_js: bool` runtime flag works without this feature;
+# `js-spider` is only needed to un-ignore the live-browser test:
+#   cargo test --features js-spider spider::js_fetch -- --ignored
+js-spider = []
 
 [dependencies]
 sysinfo = "0.39.3"
@@ -40,3 +47,8 @@ libloading = "0.9.0"
 hickory-server = "0.24"
 aes-gcm = "0.11.0"
 argon2 = "0.5.3"
+# Headless-browser CDP client for the Spider JS execution path.
+# 0.9.x uses Tokio as the default runtime (no feature flag needed).
+chromiumoxide = "0.9"
+# StreamExt for the chromiumoxide Handler polling loop.
+futures = { version = "0.3", default-features = false, features = ["std"] }
